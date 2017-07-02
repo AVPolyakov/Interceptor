@@ -42,8 +42,7 @@ namespace ConsoleApplication124
 
             using (var scope = container.BeginLifetimeScope())
             {
-                var fooHandler = scope.Resolve<IFooHandler>();
-                fooHandler.Do(new FooRequest {Id = 12});
+                scope.Resolve<IFooHandler>().Do(new FooRequest {Id = 12});
             }
         }
 
@@ -68,37 +67,22 @@ namespace ConsoleApplication124
                                     genericArguments[1].GetGenericParameterConstraints()
                                         .All(_ => _.IsAssignableFrom(method.ReturnType)))
                                 {
-                                    Type specificInterceptorType;
-                                    try
-                                    {
-                                        specificInterceptorType = interceptorType.MakeGenericType(
-                                            parameters[0].ParameterType, method.ReturnType);
-                                    }
-                                    catch (ArgumentException)
-                                    {
-                                        specificInterceptorType = null;
-                                    }
-                                    if (specificInterceptorType != null)
-                                    {
-                                        builder.RegisterType(specificInterceptorType)
-                                            .As(typeof(IInterceptor<,>).MakeGenericType(
-                                                parameters[0].ParameterType, method.ReturnType));
-                                        var baseInterceptorType = typeof(Interceptor<,>).MakeGenericType(
-                                            parameters[0].ParameterType, method.ReturnType);
-                                        var interceptorId = Guid.NewGuid().ToString();
-                                        builder.RegisterType(baseInterceptorType)
-                                            .WithParameter("method", method).Named<IInterceptor>(interceptorId);
-                                        registrationBuilder.InterceptedBy(interceptorId);
-                                    }
+                                    builder.RegisterType(interceptorType.MakeGenericType(
+                                            parameters[0].ParameterType, method.ReturnType))
+                                        .As(typeof(IInterceptor<,>).MakeGenericType(
+                                            parameters[0].ParameterType, method.ReturnType));
+                                    var baseInterceptorType = typeof(Interceptor<,>).MakeGenericType(
+                                        parameters[0].ParameterType, method.ReturnType);
+                                    var interceptorId = Guid.NewGuid().ToString();
+                                    builder.RegisterType(baseInterceptorType)
+                                        .WithParameter("method", method).Named<IInterceptor>(interceptorId);
+                                    registrationBuilder.InterceptedBy(interceptorId);
                                 }
                             }
                         }
                     }
                 }
         }
-
-        public static Tuple<Func<MethodInfo, bool>, Type> CreateTuple(Func<MethodInfo, bool> item1, Type item2)
-            => Tuple.Create(item1, item2);
     }
 
     public interface IIdentifiable
@@ -107,7 +91,7 @@ namespace ConsoleApplication124
     }
 
     public class IdentifiableInterceptor<TRequest, TResponse> : IInterceptor<TRequest, TResponse> 
-        where TRequest : struct, IIdentifiable
+        where TRequest : IIdentifiable
     {
         public TResponse Do(TRequest request, Func<TRequest, TResponse> func)
         {
