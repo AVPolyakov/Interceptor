@@ -68,16 +68,28 @@ namespace ConsoleApplication124
                                     genericArguments[1].GetGenericParameterConstraints()
                                         .All(_ => _.IsAssignableFrom(method.ReturnType)))
                                 {
-                                    builder.RegisterType(interceptorType.MakeGenericType(
-                                            parameters[0].ParameterType, method.ReturnType))
-                                        .As(typeof(IInterceptor<,>).MakeGenericType(
-                                            parameters[0].ParameterType, method.ReturnType));
-                                    var baseInterceptorType = typeof(Interceptor<,>).MakeGenericType(
-                                        parameters[0].ParameterType, method.ReturnType);
-                                    var interceptorId = Guid.NewGuid().ToString();
-                                    builder.RegisterType(baseInterceptorType)
-                                        .WithParameter("method", method).Named<IInterceptor>(interceptorId);
-                                    registrationBuilder.InterceptedBy(interceptorId);
+                                    Type makeGenericType;
+                                    try
+                                    {
+                                        makeGenericType = interceptorType.MakeGenericType(
+                                            parameters[0].ParameterType, method.ReturnType);
+                                    }
+                                    catch (ArgumentException)
+                                    {
+                                        makeGenericType = null;
+                                    }
+                                    if (makeGenericType != null)
+                                    {
+                                        builder.RegisterType(makeGenericType)
+                                            .As(typeof(IInterceptor<,>).MakeGenericType(
+                                                parameters[0].ParameterType, method.ReturnType));
+                                        var baseInterceptorType = typeof(Interceptor<,>).MakeGenericType(
+                                            parameters[0].ParameterType, method.ReturnType);
+                                        var interceptorId = Guid.NewGuid().ToString();
+                                        builder.RegisterType(baseInterceptorType)
+                                            .WithParameter("method", method).Named<IInterceptor>(interceptorId);
+                                        registrationBuilder.InterceptedBy(interceptorId);
+                                    }
                                 }
                             }
                         }
