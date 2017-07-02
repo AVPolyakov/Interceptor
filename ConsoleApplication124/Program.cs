@@ -68,19 +68,19 @@ namespace ConsoleApplication124
                                     genericArguments[1].GetGenericParameterConstraints()
                                         .All(_ => _.IsAssignableFrom(method.ReturnType)))
                                 {
-                                    Type makeGenericType;
+                                    Type specificInterceptorType;
                                     try
                                     {
-                                        makeGenericType = interceptorType.MakeGenericType(
+                                        specificInterceptorType = interceptorType.MakeGenericType(
                                             parameters[0].ParameterType, method.ReturnType);
                                     }
                                     catch (ArgumentException)
                                     {
-                                        makeGenericType = null;
+                                        specificInterceptorType = null;
                                     }
-                                    if (makeGenericType != null)
+                                    if (specificInterceptorType != null)
                                     {
-                                        builder.RegisterType(makeGenericType)
+                                        builder.RegisterType(specificInterceptorType)
                                             .As(typeof(IInterceptor<,>).MakeGenericType(
                                                 parameters[0].ParameterType, method.ReturnType));
                                         var baseInterceptorType = typeof(Interceptor<,>).MakeGenericType(
@@ -107,7 +107,7 @@ namespace ConsoleApplication124
     }
 
     public class IdentifiableInterceptor<TRequest, TResponse> : IInterceptor<TRequest, TResponse> 
-        where TRequest : IIdentifiable
+        where TRequest : struct, IIdentifiable
     {
         public TResponse Do(TRequest request, Func<TRequest, TResponse> func)
         {
